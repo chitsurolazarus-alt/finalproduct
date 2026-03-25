@@ -1,13 +1,55 @@
 // Wait for DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', function() {
     
+    // ========== SCROLL-AWAY NAVIGATION (HIDE ON SCROLL DOWN, SHOW ON SCROLL UP) ==========
+    const nav = document.getElementById('main-nav');
+    let lastScrollY = window.scrollY;
+    let ticking = false;
+    
+    // Initial state: nav is visible
+    if (nav) {
+        nav.classList.add('nav-visible');
+        
+        function handleScroll() {
+            const currentScrollY = window.scrollY;
+            
+            // Determine scroll direction
+            if (currentScrollY > lastScrollY && currentScrollY > 80) {
+                // Scrolling DOWN - hide nav
+                nav.classList.remove('nav-visible');
+                nav.classList.add('nav-hidden');
+            } else if (currentScrollY < lastScrollY) {
+                // Scrolling UP - show nav
+                nav.classList.remove('nav-hidden');
+                nav.classList.add('nav-visible');
+            }
+            
+            // If at the very top, ensure nav is visible
+            if (currentScrollY <= 10) {
+                nav.classList.remove('nav-hidden');
+                nav.classList.add('nav-visible');
+            }
+            
+            lastScrollY = currentScrollY;
+            ticking = false;
+        }
+        
+        // Use requestAnimationFrame for smooth performance
+        window.addEventListener('scroll', function() {
+            if (!ticking) {
+                requestAnimationFrame(handleScroll);
+                ticking = true;
+            }
+        });
+    }
+    
     // ========== ACTIVE NAVIGATION HIGHLIGHT ==========
     const sections = document.querySelectorAll('section');
     const navLinks = document.querySelectorAll('.nav-menu a');
     
     function updateActiveNavLink() {
         let current = '';
-        const scrollPosition = window.scrollY + 100; // Offset for better trigger
+        const scrollPosition = window.scrollY + 120; // Offset for better trigger
         
         sections.forEach(section => {
             const sectionTop = section.offsetTop;
@@ -120,7 +162,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // ========== MOBILE MENU TOGGLE ==========
     function createMobileMenu() {
-        const nav = document.querySelector('nav');
+        const navElement = document.querySelector('nav');
         const navMenu = document.querySelector('.nav-menu');
         
         if (window.innerWidth <= 768) {
@@ -128,28 +170,32 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!document.querySelector('.mobile-menu-btn')) {
                 const menuBtn = document.createElement('button');
                 menuBtn.className = 'mobile-menu-btn';
-                menuBtn.innerHTML = '<i class="fas fa-bars"></i>';
+                menuBtn.innerHTML = '<i class="fas fa-bars"></i> Menu';
                 menuBtn.style.cssText = `
                     background: var(--royal-deep);
                     color: white;
                     border: none;
-                    padding: 10px 20px;
-                    font-size: 1.5rem;
+                    padding: 12px 20px;
+                    font-size: 1.2rem;
                     cursor: pointer;
                     width: 100%;
                     display: block;
+                    font-weight: 600;
+                    text-align: center;
                 `;
                 
                 // Insert before nav menu
-                nav.insertBefore(menuBtn, navMenu);
+                navElement.insertBefore(menuBtn, navMenu);
                 navMenu.style.display = 'none';
                 
                 menuBtn.addEventListener('click', function() {
                     if (navMenu.style.display === 'none') {
                         navMenu.style.display = 'flex';
                         navMenu.style.flexDirection = 'column';
+                        menuBtn.innerHTML = '<i class="fas fa-times"></i> Close';
                     } else {
                         navMenu.style.display = 'none';
+                        menuBtn.innerHTML = '<i class="fas fa-bars"></i> Menu';
                     }
                 });
                 
@@ -168,8 +214,11 @@ document.addEventListener('DOMContentLoaded', function() {
             // Remove mobile menu if it exists and screen is larger
             if (document.querySelector('.mobile-menu-btn')) {
                 document.querySelector('.mobile-menu-btn').remove();
-                navMenu.style.display = 'flex';
-                navMenu.style.flexDirection = 'row';
+                const navMenu = document.querySelector('.nav-menu');
+                if (navMenu) {
+                    navMenu.style.display = 'flex';
+                    navMenu.style.flexDirection = 'row';
+                }
             }
         }
     }
@@ -200,5 +249,36 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    console.log('Candies Cleans website loaded successfully!');
+    // ========== FIX FOR NAVIGATION AFTER SCROLL-AWAY ==========
+    // Ensure when clicking a nav link while nav is hidden, it doesn't cause issues
+    const allNavLinks = document.querySelectorAll('.nav-menu a');
+    allNavLinks.forEach(link => {
+        link.addEventListener('click', function() {
+            // Small delay to ensure smooth scroll completes
+            setTimeout(() => {
+                if (nav && nav.classList.contains('nav-hidden')) {
+                    // If nav was hidden, show it briefly after click
+                    nav.classList.remove('nav-hidden');
+                    nav.classList.add('nav-visible');
+                    
+                    // Auto-hide again after 2 seconds of no scroll
+                    let timeout;
+                    const resetTimer = () => {
+                        clearTimeout(timeout);
+                        timeout = setTimeout(() => {
+                            if (window.scrollY > 80) {
+                                nav.classList.remove('nav-visible');
+                                nav.classList.add('nav-hidden');
+                            }
+                        }, 2000);
+                    };
+                    
+                    window.addEventListener('scroll', resetTimer);
+                    resetTimer();
+                }
+            }, 100);
+        });
+    });
+    
+    console.log('Candies Cleans website loaded successfully! Navigation scrolls away on scroll down!');
 });
